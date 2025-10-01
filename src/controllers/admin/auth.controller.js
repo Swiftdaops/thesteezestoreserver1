@@ -5,12 +5,15 @@ const isProd = process.env.NODE_ENV === 'production'
 const ACCESS_COOKIE = 'admin_at'
 const REFRESH_COOKIE = 'admin_rt'
 
+// For cross-site admin dashboard (e.g., Netlify frontend to Render backend),
+// use SameSite=None and Secure in production so cookies are sent.
+const sameSiteValue = isProd ? 'none' : 'lax'
 const accessCookieOpts = {
-  httpOnly: true, sameSite: 'lax', secure: isProd,
+  httpOnly: true, sameSite: sameSiteValue, secure: isProd,
   path: '/api/admin', maxAge: 15 * 60 * 1000
 }
 const refreshCookieOpts = {
-  httpOnly: true, sameSite: 'lax', secure: isProd,
+  httpOnly: true, sameSite: sameSiteValue, secure: isProd,
   path: '/api/admin', maxAge: 7 * 24 * 60 * 60 * 1000
 }
 

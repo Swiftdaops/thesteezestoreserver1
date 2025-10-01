@@ -32,12 +32,25 @@ app.use(
   })
 )
 
-// CORS: allow common local hosts + explicit CLIENT_ORIGIN
+// CORS: allow common local hosts + explicit client origins via env
 const allowList = [
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/127\.0\.0\.1:\d+$/,
 ]
-const clientOrigin = process.env.CLIENT_ORIGIN // e.g. http://localhost:5173
+// Primary single origin (exact match), e.g. https://your-site.netlify.app
+const clientOrigin = process.env.CLIENT_ORIGIN
+// Optional: comma-separated list of additional exact origins
+const extraOrigins = (process.env.CLIENT_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+// Optional: regex pattern for origins (e.g., ^https:\/\/.*--your-site--.*\.netlify\.app$)
+let originRegex = null
+try {
+  originRegex = process.env.CLIENT_ORIGIN_REGEX ? new RegExp(process.env.CLIENT_ORIGIN_REGEX) : null
+} catch {
+  originRegex = null
+}
 
 app.use(
   cors({
@@ -46,7 +59,9 @@ app.use(
       if (!origin) return cb(null, true)
       const ok =
         allowList.some((rx) => rx.test(origin)) ||
-        (!!clientOrigin && origin === clientOrigin)
+        (!!clientOrigin && origin === clientOrigin) ||
+        (extraOrigins.length > 0 && extraOrigins.includes(origin)) ||
+        (!!originRegex && originRegex.test(origin))
       return ok ? cb(null, true) : cb(new Error(`CORS blocked: ${origin}`))
     },
     credentials: true, // <- required for cookie-based auth
