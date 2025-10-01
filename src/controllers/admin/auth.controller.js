@@ -8,13 +8,27 @@ const REFRESH_COOKIE = 'admin_rt'
 // For cross-site admin dashboard (e.g., Netlify frontend to Render backend),
 // use SameSite=None and Secure in production so cookies are sent.
 const sameSiteValue = isProd ? 'none' : 'lax'
-const accessCookieOpts = {
+const baseAccessCookieOpts = {
   httpOnly: true, sameSite: sameSiteValue, secure: isProd,
   path: '/api/admin', maxAge: 15 * 60 * 1000
 }
-const refreshCookieOpts = {
+const baseRefreshCookieOpts = {
   httpOnly: true, sameSite: sameSiteValue, secure: isProd,
   path: '/api/admin', maxAge: 7 * 24 * 60 * 60 * 1000
+}
+
+function cookieOptsFor(req, base) {
+  // If the frontend origin is a Netlify domain, pin cookie Domain to that host
+  // so when responses are proxied through Netlify, cookies are set for the
+  // site origin (first-party for Safari).
+  try {
+    const origin = req.get('origin') || ''
+    const h = new URL(origin).hostname
+    if (h && /\.netlify\.app$/.test(h)) {
+      return { ...base, domain: h }
+    }
+  } catch {}
+  return base
 }
 
 export async function login(req, res) {
@@ -31,8 +45,8 @@ export async function login(req, res) {
   const payload = { sub:'admin', username }
   const at = signAccessToken(payload)
   const rt = signRefreshToken(payload)
-  res.cookie(ACCESS_COOKIE, at, accessCookieOpts)
-     .cookie(REFRESH_COOKIE, rt, refreshCookieOpts)
+  res.cookie(ACCESS_COOKIE, at, cookieOptsFor(req, baseAccessCookieOpts))
+    .cookie(REFRESH_COOKIE, rt, cookieOptsFor(req, baseRefreshCookieOpts))
      .json({ ok:true, user:{ username } })
 }
 
@@ -53,14 +67,16 @@ export async function refresh(req, res) {
   try {
     const decoded = verifyRefreshToken(rt)
     const at = signAccessToken({ sub:'admin', username: decoded.username || 'admin' })
-    res.cookie(ACCESS_COOKIE, at, accessCookieOpts).json({ ok:true })
+    res.cookie(ACCESS_COOKIE, at, cookieOptsFor(req, baseAccessCookieOpts)).json({ ok:true })
   } catch {
     res.status(401).json({ ok:false, message:'Refresh failed' })
   }
 }
 
 export async function logout(req, res) {
-  res.clearCookie(ACCESS_COOKIE, { ...accessCookieOpts, maxAge: 0 })
-     .clearCookie(REFRESH_COOKIE, { ...refreshCookieOpts, maxAge: 0 })
+  const ac = { ...cookieOptsFor(req, baseAccessCookieOpts), maxAge: 0 }
+  const rc = { ...cookieOptsFor(req, baseRefreshCookieOpts), maxAge: 0 }
+  res.clearCookie(ACCESS_COOKIE, ac)
+     .clearCookie(REFRESH_COOKIE, rc)
      .json({ ok:true })
 }
