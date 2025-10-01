@@ -21,11 +21,12 @@ export default function cid(req, res, next) {
     req.cid = cid
 
     // sync cookie if missing or differs
-    const isProd = process.env.NODE_ENV === 'production'
+  const isProd = process.env.NODE_ENV === 'production'
     if (cookieCid !== cid) {
       res.cookie('cid', cid, {
         httpOnly: false, // allow frontend to read & sync to localStorage
-        sameSite: 'lax',
+        // In cross-site contexts (Netlify -> Render), use None in prod so cookie is accepted
+        sameSite: isProd ? 'none' : 'lax',
         secure: isProd,
         maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
         path: '/',
