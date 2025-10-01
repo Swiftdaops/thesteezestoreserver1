@@ -59,6 +59,9 @@ const defaultFrontendOrigins = [
   'https://thesteezestore.netlify.app',
 ]
 
+// Also allow any deploy-preview under thesteezestore.netlify.app, e.g. https://<hash>--thesteezestore.netlify.app
+const defaultFrontendRegex = /^https:\/\/([a-z0-9-]+--)?thesteezestore\.netlify\.app$/
+
 app.use(
   cors({
     origin(origin, cb) {
@@ -69,7 +72,8 @@ app.use(
         (!!clientOrigin && origin === clientOrigin) ||
         (extraOrigins.length > 0 && extraOrigins.includes(origin)) ||
         (!!originRegex && originRegex.test(origin)) ||
-        defaultFrontendOrigins.includes(origin)
+        defaultFrontendOrigins.includes(origin) ||
+        defaultFrontendRegex.test(origin)
       return ok ? cb(null, true) : cb(new Error(`CORS blocked: ${origin}`))
     },
     credentials: true, // <- required for cookie-based auth
