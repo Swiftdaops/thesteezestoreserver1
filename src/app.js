@@ -74,11 +74,14 @@ app.use(
         (!!originRegex && originRegex.test(origin)) ||
         defaultFrontendOrigins.includes(origin) ||
         defaultFrontendRegex.test(origin)
-      return ok ? cb(null, true) : cb(new Error(`CORS blocked: ${origin}`))
+      if (ok) return cb(null, true)
+      console.warn('CORS reject:', origin)
+      return cb(null, false) // deny without throwing to avoid 5xx
     },
     credentials: true, // <- required for cookie-based auth
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-cid'],
+    // Let cors reflect requested headers instead of a fixed allowlist
+    // allowedHeaders: undefined,
   })
 )
 // Ensure OPTIONS preflight is handled everywhere
