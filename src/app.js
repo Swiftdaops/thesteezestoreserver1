@@ -52,6 +52,13 @@ try {
   originRegex = null
 }
 
+// Temporary: explicitly allow current Netlify site(s) if env is not set
+// Replace or remove once CLIENT_ORIGIN/CLIENT_ORIGINS/CLIENT_ORIGIN_REGEX are configured in prod
+const defaultFrontendOrigins = [
+  'https://68ddaf51f0946d44046a30b2--thesteezestore.netlify.app',
+  'https://thesteezestore.netlify.app',
+]
+
 app.use(
   cors({
     origin(origin, cb) {
@@ -61,7 +68,8 @@ app.use(
         allowList.some((rx) => rx.test(origin)) ||
         (!!clientOrigin && origin === clientOrigin) ||
         (extraOrigins.length > 0 && extraOrigins.includes(origin)) ||
-        (!!originRegex && originRegex.test(origin))
+        (!!originRegex && originRegex.test(origin)) ||
+        defaultFrontendOrigins.includes(origin)
       return ok ? cb(null, true) : cb(new Error(`CORS blocked: ${origin}`))
     },
     credentials: true, // <- required for cookie-based auth
