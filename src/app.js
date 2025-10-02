@@ -99,6 +99,24 @@ app.use(cid)
 // --- Health check ---
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
+// --- Utility redirects ---
+// WhatsApp redirect: use /api/whatsapp?text=Your%20message
+// Centralizes the number so the frontend can link here and we can change the number in one place.
+app.get('/api/whatsapp', (req, res) => {
+  try {
+    const raw = String(req.query.text ?? req.query.msg ?? '')
+    // Optional override: allow specifying a different destination via ?to= or ?phone=
+    const toParam = String(req.query.to ?? req.query.phone ?? '').replace(/\D/g, '')
+    const number = toParam || '2349018318911'
+    if (!number) return res.status(400).json({ ok: false, error: 'Missing destination number' })
+    const url = new URL(`https://wa.me/${number}`)
+    if (raw) url.searchParams.set('text', raw)
+    return res.redirect(302, url.toString())
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'Invalid request' })
+  }
+})
+
 // --- Public routes ---
 app.use('/api/products', productsPublicRouter)
 app.use('/api/models', modelsPublicRouter)
